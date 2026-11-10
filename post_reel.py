@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """queue.json 에서 게시 시각이 지난 릴스를 인스타 API(Instagram Login)로 게시한다.
 환경변수: SEOUL_IG_TOKEN, SEOUL_IG_USER_ID, REPO (owner/name), DRY(1이면 게시 안 함)
-queue.json 항목: {id, video, caption, publish_at(ISO, +09:00), cover(선택), posted(false), media_id}
+환경변수(스레드): SEOUL_TH_TOKEN (없으면 스레드는 건너뜀)
+queue.json 항목: {id, video, caption, publish_at(ISO, +09:00), cover, threads(스레드 본문), posted(false), media_id}
 """
 import json, os, subprocess, sys, time, urllib.parse, urllib.request, datetime as dt
 
@@ -11,6 +12,8 @@ UID = os.environ.get("SEOUL_IG_USER_ID", "")
 REPO = os.environ.get("REPO", "")
 BRANCH = os.environ.get("BRANCH", "main")
 DRY = os.environ.get("DRY") == "1"
+TH_API = "https://graph.threads.net/v1.0"
+TH_TOKEN = os.environ.get("SEOUL_TH_TOKEN", "")
 MAX_PER_RUN = 1  # 한 번 실행에 1개만(시각 간격 보장)
 
 
@@ -25,6 +28,53 @@ def call(method, path, **params):
             return json.load(r)
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"{method} {path} -> {e.code} {e.read().decode()[:400]}")
+
+
+def th(method, path, **params):
+    params["access_token"] = TH_TOKEN
+    data = urllib.parse.urlencode(params).encode()
+    url = f"{TH_API}/{path}"
+    req = urllib.request.Request(url if method == "POST" else url + "?" + data.decode(),
+                                 data=data if method == "POST" else None, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"threads {method} {path} -> {e.code} {e.read().decode()[:400]}")
+
+
+def th_publish(text, **extra):
+    """텍스트 글 하나를 만들어 게시하고 id 를 돌려준다."""
+    me = th("GET", "me", fields="id")["id"]
+    c = th("POST", f"{me}/threads", media_type="TEXT", text=text, **extra)
+    for _ in range(12):
+        st = th("GET", c["id"], fields="status")
+        if st.get("status") in ("FINISHED", None):
+            break
+        if st.get("status") in ("ERROR", "EXPIRED"):
+            raise RuntimeError(f"스레드 컨테이너 실패: {st}")
+        time.sleep(5)
+    return th("POST", f"{me}/threads_publish", creation_id=c["id"])["id"]
+
+
+def do_threads(x):
+    """릴스 게시 뒤: 스레드 본문 → 첫 댓글에 인스타 링크. 실패해도 릴스 게시는 유지한다."""
+    if not x.get("threads") or x.get("threads_done") or not TH_TOKEN or DRY:
+        return
+    try:
+        if not x.get("threads_id"):
+            x["threads_id"] = th_publish(x["threads"][:490])
+            print("스레드 본문 완료:", x["threads_id"])
+        link = call("GET", x["media_id"], fields="permalink").get("permalink", "")
+        if not link:
+            raise RuntimeError("인스타 링크(permalink)를 못 가져옴")
+        th_publish(f"영상으로 보기 👉 {link}", reply_to_id=x["threads_id"], link_attachment=link)
+        x["threads_done"] = True
+        x.pop("threads_error", None)
+        print("스레드 첫 댓글(인스타 링크) 완료")
+    except Exception as e:
+        x["threads_error"] = str(e)[:200]
+        print("스레드 실패(릴스는 게시됨):", e)
 
 
 def raw(path):
@@ -67,6 +117,10 @@ def main():
         if x not in fresh and not x.get("skipped"):
             x["skipped"] = "late"
             print("늦어서 건너뜀:", x["id"])
+    for x in q:  # 릴스는 올라갔는데 스레드가 덜 끝난 항목 재시도(게시 후 6시간 이내)
+        if x.get("posted") and x.get("threads") and not x.get("threads_done") and x.get("posted_at"):
+            if (now - dt.datetime.fromisoformat(x["posted_at"])).total_seconds() < 6 * 3600:
+                do_threads(x)
     done = 0
     for x in fresh[:MAX_PER_RUN]:
         print("게시 대상:", x["id"], x["publish_at"])
@@ -100,6 +154,7 @@ def main():
         x["media_id"] = p["id"]
         x["posted_at"] = now.isoformat()
         print("게시 완료:", p["id"])
+        do_threads(x)
         done += 1
     json.dump(q, open("queue.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return done

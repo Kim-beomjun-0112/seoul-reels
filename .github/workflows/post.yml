@@ -21,6 +21,7 @@ jobs:
         env:
           SEOUL_IG_TOKEN: ${{ secrets.SEOUL_IG_TOKEN }}
           SEOUL_IG_USER_ID: ${{ secrets.SEOUL_IG_USER_ID }}
+          SEOUL_TH_TOKEN: ${{ secrets.SEOUL_TH_TOKEN }}
           REPO: ${{ github.repository }}
           DRY: ${{ inputs.dry }}
         run: python3 post_reel.py
