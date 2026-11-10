@@ -31,7 +31,14 @@ def raw(path):
     return f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{urllib.parse.quote(path)}"
 
 
+def check():
+    me = call("GET", "me", fields="user_id,username,account_type")
+    print("토큰 확인:", me.get("username"), me.get("account_type"), "id 일치:", str(me.get("user_id")) == UID or str(me.get("id")) == UID)
+
+
 def main():
+    if DRY and TOKEN:
+        check()
     q = json.load(open("queue.json", encoding="utf-8"))
     now = dt.datetime.now(dt.timezone.utc)
     due = [x for x in q if not x.get("posted")
