@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: ffmpeg 설치(9:16 비율 검사용)
+        run: |
+          which ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - name: 릴스 게시
         env:
           SEOUL_IG_TOKEN: ${{ secrets.SEOUL_IG_TOKEN }}

@@ -68,7 +68,7 @@ def do_threads(x):
         link = call("GET", x["media_id"], fields="permalink").get("permalink", "")
         if not link:
             raise RuntimeError("인스타 링크(permalink)를 못 가져옴")
-        th_publish(f"영상으로 보기 👉 {link}", reply_to_id=x["threads_id"], link_attachment=link)
+        th_publish(f"영상으로 보기 👉 {link}", reply_to_id=x["threads_id"])
         x["threads_done"] = True
         x.pop("threads_error", None)
         print("스레드 첫 댓글(인스타 링크) 완료")
