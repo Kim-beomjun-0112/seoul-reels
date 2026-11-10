@@ -103,9 +103,19 @@ def check():
     print("토큰 확인:", me.get("username"), me.get("account_type"), "id 일치:", str(me.get("user_id")) == UID or str(me.get("id")) == UID)
 
 
+def check_threads():
+    me = th("GET", "me", fields="id,username")
+    print("스레드 토큰 확인:", me.get("username"), "OK" if me.get("id") else "id 없음")
+
+
 def main():
     if DRY and TOKEN:
         check()
+    if DRY and TH_TOKEN:
+        try:
+            check_threads()
+        except Exception as e:
+            print("스레드 토큰 확인 실패:", e)
     q = json.load(open("queue.json", encoding="utf-8"))
     now = dt.datetime.now(dt.timezone.utc)
     due = [x for x in q if not x.get("posted") and not x.get("skipped")
