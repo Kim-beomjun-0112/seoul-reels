@@ -1,0 +1,33 @@
+name: post-reel
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "1이면 게시하지 않고 대상만 출력"
+        default: "0"
+  schedule:
+    - cron: "*/15 * * * *"
+concurrency:
+  group: post-reel
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 릴스 게시
+        env:
+          SEOUL_IG_TOKEN: ${{ secrets.SEOUL_IG_TOKEN }}
+          SEOUL_IG_USER_ID: ${{ secrets.SEOUL_IG_USER_ID }}
+          REPO: ${{ github.repository }}
+          DRY: ${{ inputs.dry }}
+        run: python3 post_reel.py
+      - name: 게시 기록 저장 및 오래된 영상 정리
+        run: |
+          find reels -type f -mtime +7 -delete 2>/dev/null || true
+          git config user.name "seoul-bot"
+          git config user.email "seoul-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || { git commit -m "게시 기록 갱신"; git push; }

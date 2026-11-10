@@ -1,0 +1,27 @@
+name: token-refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 1,15 * *"
+permissions:
+  contents: read
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 인스타 토큰 연장(60일)
+        env:
+          SEOUL_IG_TOKEN: ${{ secrets.SEOUL_IG_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          [ -n "$SEOUL_IG_TOKEN" ] || { echo "토큰 없음 → 건너뜀"; exit 0; }
+          out=$(curl -s "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=$SEOUL_IG_TOKEN")
+          new=$(echo "$out" | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))")
+          [ -n "$new" ] || { echo "연장 실패: $(echo "$out" | head -c 200)"; exit 1; }
+          if [ -n "$GH_PAT" ]; then
+            GH_TOKEN="$GH_PAT" gh secret set SEOUL_IG_TOKEN --repo "$REPO" --body "$new"
+            echo "토큰 연장·시크릿 갱신 완료"
+          else
+            echo "연장은 됐지만 GH_PAT 가 없어 시크릿은 그대로"
+          fi
