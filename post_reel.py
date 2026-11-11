@@ -65,10 +65,15 @@ def do_threads(x):
         if not x.get("threads_id"):
             x["threads_id"] = th_publish(x["threads"][:490])
             print("스레드 본문 완료:", x["threads_id"])
-        link = call("GET", x["media_id"], fields="permalink").get("permalink", "")
-        if not link:
-            raise RuntimeError("인스타 링크(permalink)를 못 가져옴")
-        th_publish(f"영상으로 보기 👉 {link}", reply_to_id=x["threads_id"])
+        # 릴스 주소를 그대로 달면 스레드에서 영상이 바로 재생돼 인스타 유입이 줄어든다
+        # → 인스타 프로필 주소로 링크 카드를 만들고, 프로필 맨 위 릴스로 안내한다.
+        link = "https://www.instagram.com/seoul_now_0112/"
+        text = f"영상은 인스타에서 볼 수 있음 (프로필 맨 위 릴스) {link}"
+        try:
+            th_publish(text, reply_to_id=x["threads_id"], link_attachment=link)
+        except Exception as e:
+            print("링크 카드 첨부 실패 → 글자 링크로 재시도:", str(e)[:120])
+            th_publish(text, reply_to_id=x["threads_id"])
         x["threads_done"] = True
         x.pop("threads_error", None)
         print("스레드 첫 댓글(인스타 링크) 완료")
