@@ -18,6 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: ffmpeg 설치(9:16 비율 검사용)
+        timeout-minutes: 3
+        continue-on-error: true
         run: |
           which ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - name: 릴스 게시
