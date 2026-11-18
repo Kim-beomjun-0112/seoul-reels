@@ -36,10 +36,15 @@ jobs:
           SEOUL_TH_TOKEN: ${{ secrets.SEOUL_TH_TOKEN }}
           REPO: ${{ github.repository }}
         run: python3 threads_post.py --post
+      - name: 댓글 답글 (replies_enabled.txt 가 on 일 때만)
+        continue-on-error: true
+        env:
+          SEOUL_TH_TOKEN: ${{ secrets.SEOUL_TH_TOKEN }}
+        run: python3 replies_bot.py --run
       - name: 기록 저장
         if: always()
         run: |
           git config user.name "econ-bot"
           git config user.email "econ-bot@users.noreply.github.com"
-          git add state.json
+          git add state.json replies_state.json 2>/dev/null || git add state.json
           git diff --cached --quiet || { git commit -m "게시 기록 갱신"; git pull --rebase -q; git push; }
