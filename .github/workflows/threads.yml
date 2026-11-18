@@ -1,0 +1,45 @@
+name: threads
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+concurrency:
+  group: threads
+  cancel-in-progress: false
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - name: 중계 페이지 만들기
+        id: build
+        run: python3 threads_post.py --build
+      - name: 페이지 업로드
+        if: steps.build.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: 페이지 배포
+        if: steps.build.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4
+      - name: 배포 기록
+        if: steps.build.outputs.changed == 'true'
+        run: python3 threads_post.py --mark
+      - name: 스레드 게시
+        env:
+          SEOUL_TH_TOKEN: ${{ secrets.SEOUL_TH_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python3 threads_post.py --post
+      - name: 기록 저장
+        if: always()
+        run: |
+          git config user.name "econ-bot"
+          git config user.email "econ-bot@users.noreply.github.com"
+          git add state.json
+          git diff --cached --quiet || { git commit -m "게시 기록 갱신"; git pull --rebase -q; git push; }
