@@ -3,7 +3,7 @@
 
 queue.json 의 항목을 publish_at(KST) 이 지나고, 유튜브 영상이 공개된 뒤에 올린다.
   - 인스타: 예고편 릴스(결말 직전에서 끊긴 영상 + "결말은 유튜브에서" 엔드카드)
-  - 스레드: 같은 예고편 영상 + 본문, 첫 댓글 = 유튜브 풀버전 링크
+  - 스레드: 결말 없는 반말 후킹 글, 첫 댓글 = 숏스터리 유튜브 링크
 한 번 실행에 한 항목만 처리한다. 게시 기록은 state.json.
 
 켜짐/꺼짐: shortstery/enabled.txt 첫 줄이 "on" 일 때만 게시.
@@ -98,22 +98,13 @@ def post_ig(item):
 
 # ------------------------------------------------------------------ 스레드
 def post_th(item):
-    last = None
+    """본문 = 결말 없는 반말 후킹 글(텍스트), 첫 댓글 = 유튜브 링크."""
     link = f"https://youtube.com/shorts/{item['yt_id']}"
-    for vurl in media_urls(item["video"]):
-        try:
-            c = call(TH_API, "POST", "me/threads", TH_TOKEN, media_type="VIDEO", video_url=vurl,
-                     text=item["th_text"])
-            wait_ready(TH_API, c["id"], TH_TOKEN, "status", {"FINISHED"}, {"ERROR", "EXPIRED"})
-            pid = call(TH_API, "POST", "me/threads_publish", TH_TOKEN, creation_id=c["id"])["id"]
-            break
-        except Exception as e:
-            last = e
-            print("스레드 시도 실패:", e)
-    else:
-        raise last
+    c = call(TH_API, "POST", "me/threads", TH_TOKEN, media_type="TEXT", text=item["th_text"])
+    time.sleep(5)
+    pid = call(TH_API, "POST", "me/threads_publish", TH_TOKEN, creation_id=c["id"])["id"]
     # 첫 댓글: 유튜브 풀버전 링크 (링크 카드 → 실패 시 일반 글)
-    reply = f"🔍 결말까지 풀버전 ▶ {link}"
+    reply = f"결말은 숏스터리 유튜브에서 👉 {link}\n채널: https://www.youtube.com/@shortstery_0112"
     time.sleep(5)
     for extra in ({"link_attachment": link}, {}):
         try:
