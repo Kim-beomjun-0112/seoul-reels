@@ -1,6 +1,9 @@
 name: shortstery
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['shortstery/queue.json', 'shortstery/enabled.txt', '.github/workflows/shortstery.yml']
   schedule:
     - cron: "7,22,37,52 * * * *"
 concurrency:
