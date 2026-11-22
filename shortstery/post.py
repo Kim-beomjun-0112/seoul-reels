@@ -141,6 +141,12 @@ def run(preview=False):
     if open(os.path.join(HERE, "enabled.txt")).read().strip().splitlines()[0].strip() != "on":
         print("꺼져 있음")
         return
+    for name, base, tok in (("인스타", IG_API, IG_TOKEN), ("스레드", TH_API, TH_TOKEN)):
+        if tok:
+            try:
+                print(name, "토큰 OK:", call(base, "GET", "me", tok, fields="username").get("username"))
+            except Exception as e:
+                print(name, "토큰 오류:", e)
     for it, need_ig, need_th in due_items(queue, state, now):
         if not yt_public(it["yt_id"]):
             print(f"{it['ep']}: 유튜브 아직 비공개 → 대기")
