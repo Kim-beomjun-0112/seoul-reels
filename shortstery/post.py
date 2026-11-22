@@ -55,7 +55,8 @@ def call(base, method, path, token, **params):
 
 
 def media_urls(path):
-    return [f"https://cdn.jsdelivr.net/gh/{REPO}@main/shortstery/{path}",
+    ref = os.environ.get("GITHUB_SHA", "main")  # 커밋 고정 → jsDelivr 캐시 문제 없음
+    return [f"https://cdn.jsdelivr.net/gh/{REPO}@{ref}/shortstery/{path}",
             f"https://raw.githubusercontent.com/{REPO}/main/shortstery/{path}"]
 
 
