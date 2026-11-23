@@ -1,0 +1,31 @@
+name: jabmuni
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['jabmuni/queue.json', 'jabmuni/enabled.txt', '.github/workflows/jabmuni.yml']
+  schedule:
+    - cron: "2,12,22,32,42,52 * * * *"
+concurrency:
+  group: jabmuni
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 스레드(+인스타) 게시
+        env:
+          JABMUNI_IG_TOKEN: ${{ secrets.JABMUNI_IG_TOKEN }}
+          JABMUNI_TH_TOKEN: ${{ secrets.JABMUNI_TH_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python3 jabmuni/post.py --run
+      - name: 기록 저장
+        if: always()
+        run: |
+          git config user.name "jabmuni-bot"
+          git config user.email "jabmuni-bot@users.noreply.github.com"
+          git add jabmuni/state.json
+          git diff --cached --quiet || { git commit -m "잡문이 게시 기록"; git pull --rebase -q; git push; }
