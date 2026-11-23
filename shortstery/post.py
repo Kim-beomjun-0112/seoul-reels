@@ -106,6 +106,8 @@ def post_th(item):
     pid = call(TH_API, "POST", "me/threads_publish", TH_TOKEN, creation_id=c["id"])["id"]
     # 첫 댓글: 유튜브 풀버전 링크 (링크 카드 → 실패 시 일반 글)
     reply = f"결말은 숏스터리 유튜브에서 👉 {link}\n채널: https://www.youtube.com/@shortstery_0112"
+    if item.get("th_reply"):  # 소개글 등: 첫 댓글 직접 지정
+        reply, link = item["th_reply"], item.get("th_link", "https://www.youtube.com/@shortstery_0112")
     time.sleep(5)
     for extra in ({"link_attachment": link}, {}):
         try:
@@ -148,7 +150,7 @@ def run(preview=False):
             except Exception as e:
                 print(name, "토큰 오류:", e)
     for it, need_ig, need_th in due_items(queue, state, now):
-        if not yt_public(it["yt_id"]):
+        if it.get("kind") != "intro" and not yt_public(it["yt_id"]):
             print(f"{it['ep']}: 유튜브 아직 비공개 → 대기")
             continue
         s = state.setdefault(it["ep"], {})
