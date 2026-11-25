@@ -171,10 +171,36 @@ def run(preview=False):
             except Exception as e:
                 print(f"{it['ep']}: 스레드 실패 {e}")
             jsave("state.json", state)
-        break  # 한 번에 한 편만
-    else:
-        print("올릴 차례인 항목 없음")
+        return True  # 한 번에 한 편만
+    print("올릴 차례인 항목 없음")
+    return False
+
+
+def commit_state():
+    import subprocess
+    sh = lambda *c: subprocess.run(c, cwd=os.path.dirname(HERE), check=False)
+    sh("git", "add", "jabmuni/state.json")
+    if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=os.path.dirname(HERE)).returncode:
+        sh("git", "commit", "-q", "-m", "잡문이 게시 기록")
+        sh("git", "pull", "--rebase", "-q")
+        sh("git", "push", "-q")
+
+
+def loop(minutes, gap=50, tick=10):
+    """GitHub 예약 실행이 드문드문이라, 한 번 깨어나면 몇 시간 동안 10분마다 확인하며 올린다(게시 간격 최소 gap분)."""
+    t0 = time.time(); last = 0
+    while time.time() - t0 < minutes * 60:
+        if time.time() - last >= gap * 60:
+            try:
+                if run():
+                    last = time.time(); commit_state()
+            except Exception as e:
+                print("오류:", e)
+        time.sleep(tick * 60)
 
 
 if __name__ == "__main__":
-    run(preview="--preview" in sys.argv)
+    if "--loop" in sys.argv:
+        loop(int(os.environ.get("LOOP_MIN", "320")))
+    else:
+        run(preview="--preview" in sys.argv)

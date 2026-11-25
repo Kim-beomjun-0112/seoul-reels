@@ -14,6 +14,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 345
     steps:
       - uses: actions/checkout@v4
       - name: 스레드(+인스타) 게시
@@ -21,7 +22,10 @@ jobs:
           JABMUNI_IG_TOKEN: ${{ secrets.JABMUNI_IG_TOKEN }}
           JABMUNI_TH_TOKEN: ${{ secrets.JABMUNI_TH_TOKEN }}
           REPO: ${{ github.repository }}
-        run: python3 jabmuni/post.py --run
+        run: |
+          git config user.name "jabmuni-bot"
+          git config user.email "jabmuni-bot@users.noreply.github.com"
+          python3 jabmuni/post.py --loop
       - name: 기록 저장
         if: always()
         run: |
