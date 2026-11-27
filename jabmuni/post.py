@@ -101,7 +101,7 @@ def post_ig(item):
 # ------------------------------------------------------------------ 스레드
 def post_th(item):
     """본문 = 결말 없는 반말 후킹 글(텍스트), 첫 댓글 = 유튜브 링크."""
-    link = f"https://youtube.com/shorts/{item['yt_id']}"
+    link = item.get("link") or f"https://youtube.com/shorts/{item['yt_id']}"
     c = call(TH_API, "POST", "me/threads", TH_TOKEN, media_type="TEXT", text=item["th_text"])
     time.sleep(5)
     pid = call(TH_API, "POST", "me/threads_publish", TH_TOKEN, creation_id=c["id"])["id"]
